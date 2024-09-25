@@ -1,16 +1,25 @@
-import express, { Request, Response } from "express";
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+import express from "express";
+import authRoutes from "./routes/auth.routes";
+import userRoutes from "./routes/user.routes";
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Middleware för att parsa JSON
 app.use(express.json());
 
-// En enkel route
-app.get("/", (req: Request, res: Response) => {
-  res.send("Hello, Trullo API!");
+app.use('/auth', authRoutes);
+
+app.use('/users', userRoutes);
+
+app.get('/test', (req, res) => {
+  res.send('Hello, Trullo API is working!');
 });
 
-app.listen(port, () => {
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
   console.log(`Server is running on port ${port}`);
 });
