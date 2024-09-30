@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import { signup, login } from '../controllers/auth.controllers';
 import { body, validationResult } from 'express-validator';
+import { Request, Response, NextFunction } from 'express';
 
 const router = Router();
 
-const handleValidationErrors = (req: any, res: any, next: any) => {
+const handleValidationErrors = (req: Request, res: Response, next: NextFunction)  => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
