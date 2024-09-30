@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { signup as signupService, login as loginService } from '../services/auth.service';
+import { signupService, loginService } from '../services/auth.service';
 import { validationResult } from 'express-validator';
 
 export async function signup(req: Request, res: Response) {
@@ -12,14 +12,18 @@ export async function signup(req: Request, res: Response) {
 
   try {
     const user = await signupService(name, email, password);
-    res.status(201).json({ message: 'User created successfully', user: { id: user.id, name: user.name, email: user.email } });
+    const token = await loginService(email, password);
+    return res.status(201).json({ message: 'User created successfully', token });
   } catch (error) {
     if (error instanceof Error && error.message.includes('User already exists')) {
       return res.status(409).json({ error: 'User already exists with this email' });
     }
-    res.status(500).json({ error: 'Failed to sign up user' });
+
+    console.error('Signup error:', error);
+    return res.status(500).json({ error: 'Failed to sign up user' });
   }
 }
+
 
 export async function login(req: Request, res: Response) {
   const errors = validationResult(req);
@@ -31,9 +35,9 @@ export async function login(req: Request, res: Response) {
 
   try {
     const token = await loginService(email, password);
-    res.status(200).json({ token });
+    return res.status(200).json({ token });
   } catch (error) {
-    const err = error as Error;
-    res.status(400).json({ error: err.message });
+    console.error('Login error:', error);
+    return res.status(400).json({ error: 'Invalid credentials' });
   }
 }

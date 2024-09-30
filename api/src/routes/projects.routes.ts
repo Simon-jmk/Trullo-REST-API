@@ -1,15 +1,20 @@
 import { Router } from 'express';
-import { createProject, getProjects, updateProject, deleteProject, validateProject } from '../controllers/projects.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
+import {
+  createProject,
+  getProjects,
+  updateProject,
+  deleteProject
+} from '../controllers/projects.controller';
 
 const router = Router();
 
-router.get('/', getProjects); 
+router.get('/', authMiddleware('USER'), getProjects);
 
-router.post('/', validateProject, createProject);
+router.post('/', authMiddleware('USER'), createProject);
 
-router.put('/:id', authMiddleware, updateProject); 
+router.put('/:id', authMiddleware('USER'), updateProject);
 
-router.delete('/:id', authMiddleware, deleteProject); 
+router.delete('/:id', authMiddleware('USER'), deleteProject);
 
 export default router;

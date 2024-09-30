@@ -12,29 +12,30 @@ model User {
   email       String      @unique
   password    String
   projects    Project[]
-  tasks       Task[]      @relation("TaskUsers") // Many-to-many relationship with Task
+  tasks       Task[]      @relation("TaskUsers")  // Many-to-many relationship with Task
+  role        Role        @default(USER)          // User role (USER or ADMIN)
 }
 
 model Project {
-  id          Int      @id @default(autoincrement())
+  id          Int       @id @default(autoincrement())
   name        String
   description String
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
   ownerId     Int
-  owner       User     @relation(fields: [ownerId], references: [id])
+  owner       User      @relation(fields: [ownerId], references: [id])
   tasks       Task[]
 }
 
 model Task {
-  id          Int        @id @default(autoincrement())
+  id          Int         @id @default(autoincrement())
   title       String
-  description String
+  description String?
   status      TaskStatus
   projectId   Int
-  project     Project    @relation(fields: [projectId], references: [id])
-  users       User[]     @relation("TaskUsers") // Many-to-many relationship with User
-  tags        String      // Concatenated tags as a single string
-  createdAt   DateTime   @default(now())
+  project     Project     @relation(fields: [projectId], references: [id])
+  users       User[]      @relation("TaskUsers")  // Many-to-many relationship with User
+  tags        String?
+  createdAt   DateTime    @default(now())
   finishedBy  DateTime?
 }
 
@@ -43,4 +44,9 @@ enum TaskStatus {
   InProgress
   Blocked
   Done
+}
+
+enum Role {
+  USER
+  ADMIN
 }
