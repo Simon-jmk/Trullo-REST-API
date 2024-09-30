@@ -1,61 +1,71 @@
 import { Request, Response } from 'express';
+import { validationResult, body } from 'express-validator';
 import prisma from '../models/prismaClient';
 
-export async function getTasks(req: Request, res: Response) {
-  const userId = req.userId;
-
-  try {
-    const tasks = await prisma.task.findMany({
-      where: { assignedTo: userId },
-      include: { project: true },
-    });
-    res.json(tasks);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch tasks' });
-  }
-}
-
 export const createTask = async (req: Request, res: Response) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  const { title, description, status, userIds, projectId, tags } = req.body;
+
+  if (!projectId) {
+    return res.status(400).json({ error: 'Project ID is required' });
+  }
+
   try {
-    const task = await prisma.task.create({
-      data: req.body,
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
     });
 
-    res.status(201).json(task);
-  } catch (error) {
-    res.status(500).json({ message: 'Error creating task', error });
-  }
-};
+    if (!project) {
+      return res.status(400).json({ error: 'Invalid project ID' });
+    }
 
-export async function updateTask(req: Request, res: Response) {
-  const taskId = parseInt(req.params.id);
-  const { title, description, status, tags } = req.body;
+    const userConnections = (userIds || []).map((userId: number) => ({ id: userId }));
 
-  try {
-    const task = await prisma.task.update({
-      where: { id: taskId },
+    const task = await prisma.task.create({
       data: {
         title,
         description,
         status,
-        tags,
+        project: { connect: { id: projectId } },
+        tags: tags || '',
+        users: {
+          connect: userConnections,
+        },
       },
     });
-    res.status(200).json(task);
+
+    res.status(201).json(task);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to update task' });
+    console.error('Error creating task:', error);
+    res.status(500).json({ error: 'Failed to create task' });
   }
-}
+};
 
-export async function deleteTask(req: Request, res: Response) {
-  const taskId = parseInt(req.params.id);
-
+export const getTasks = async (req: Request, res: Response) => {
   try {
-    await prisma.task.delete({
-      where: { id: taskId },
+    const tasks = await prisma.task.findMany({
+      include: {
+        project: true,
+        users: true,
+      },
     });
-    res.status(204).send();
+
+    res.status(200).json(tasks);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to delete task' });
+    console.error('Error fetching tasks:', error);
+    res.status(500).json({ error: 'Failed to fetch tasks' });
   }
-}
+};
+
+export const validateTask = [
+  body('title')
+    .notEmpty()
+    .withMessage('Title is required'),
+  body('projectId')
+    .notEmpty()
+    .withMessage('Project ID is required'),
+];

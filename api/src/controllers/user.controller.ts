@@ -23,6 +23,25 @@ export const getCurrentUser = async (req: AuthenticatedRequest, res: Response) =
   }
 };
 
+export const getAllUsers = async (req: Request, res: Response) => {
+  try {
+    const users = await prisma.user.findMany({
+      include: {
+        projects: {
+          include: {
+            tasks: true,
+          },
+        },
+      },
+    });
+
+    res.json(users);
+  } catch (error) {
+    console.error('Error fetching users with projects and tasks:', error);
+    res.status(500).json({ message: 'Error fetching users', error });
+  }
+};
+
 export const getUser = async (req: AuthenticatedRequest, res: Response) => {
   const userId = parseInt(req.params.id);
 
