@@ -1,4 +1,5 @@
-import prisma from '../models/prismaClient'; 
+import prisma from '../models/prismaClient';
+import { body } from 'express-validator';
 
 export async function createUser(name: string, email: string, password: string) {
   return prisma.user.create({
@@ -11,3 +12,8 @@ export async function getAllUsers() {
     include: { projects: true, tasks: true },
   });
 }
+
+export const updateUserValidation = [
+  body('name').optional().notEmpty().withMessage('Name cannot be empty'),
+  body('email').optional().isEmail().withMessage('Valid email is required'),
+];

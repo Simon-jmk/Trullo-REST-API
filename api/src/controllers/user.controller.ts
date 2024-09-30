@@ -1,27 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../models/prismaClient';
-
-interface AuthenticatedRequest extends Request {
-  userId?: number;
-}
-
-export const getCurrentUser = async (req: AuthenticatedRequest, res: Response) => {
-  const userId = req.userId;
-
-  try {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-    });
-
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    res.json(user);
-  } catch (error) {
-    res.status(500).json({ message: 'Error fetching user', error });
-  }
-};
+import { validationResult } from 'express-validator';
+import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 
 export const getAllUsers = async (req: Request, res: Response) => {
   try {
@@ -43,7 +23,11 @@ export const getAllUsers = async (req: Request, res: Response) => {
 };
 
 export const getUser = async (req: AuthenticatedRequest, res: Response) => {
-  const userId = parseInt(req.params.id);
+  const userId = req.userId;
+
+  if (!userId) {
+    return res.status(401).json({ message: 'Unauthorized: User ID is missing.' });
+  }
 
   try {
     const user = await prisma.user.findUnique({
@@ -56,7 +40,35 @@ export const getUser = async (req: AuthenticatedRequest, res: Response) => {
 
     res.json(user);
   } catch (error) {
+    console.error('Error fetching user:', error);
     res.status(500).json({ message: 'Error fetching user', error });
+  }
+};
+
+export const updateUser = async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.userId;
+
+  if (!userId) {
+    return res.status(401).json({ message: 'Unauthorized: User ID is missing.' });
+  }
+
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  const { name, email } = req.body;
+
+  try {
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: { name, email },
+    });
+
+    res.json(updatedUser);
+  } catch (error) {
+    console.error('Error updating user:', error);
+    res.status(500).json({ message: 'Error updating user', error });
   }
 };
 
@@ -68,11 +80,23 @@ export const deleteUser = async (req: AuthenticatedRequest, res: Response) => {
   }
 
   try {
+    const userToDelete = await prisma.user.findUnique({ where: { id: userId } });
+    if (!userToDelete) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+    await prisma.task.deleteMany({
+      where: { users: { some: { id: userId } } },
+    });
+    await prisma.project.deleteMany({
+      where: { ownerId: userId },
+    });
     await prisma.user.delete({
       where: { id: userId },
     });
+
     res.status(204).send();
   } catch (error) {
-    res.status(500).json({ message: 'Failed to delete user', error });
+    console.error('Failed to delete user:', error);
+    res.status(500).json({ message: 'Failed to delete user', error: (error as Error).message });
   }
 };
